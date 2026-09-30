@@ -53,10 +53,10 @@ if __name__ == "__main__":
 
     while not complete:
         player = input("Enter your move (X or O): ")
-        row = int(input("Enter the row (0, 1, or 2): "))
-        col = int(input("Enter the column (0, 1, or 2): "))
+        row = int(input("Enter the row (1, 2, or 3): "))
+        col = int(input("Enter the column (1, 2, or 3): "))
 
-        if move(player, row, col):
+        if move(player, row - 1, col - 1):
             print(board)
         else:
             print("Invalid move. Try again.")
