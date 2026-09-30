@@ -67,6 +67,7 @@ if __name__ == "__main__":
             print(board)
         else:
             print("Invalid move. Try again.")
+            continue
 
         # Check for a winner or a tie
         if check_game_status():
