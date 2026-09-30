@@ -51,10 +51,17 @@ if __name__ == "__main__":
 
     complete = False
 
+    # X is 0, O is 1
+    turn = 0
+
     while not complete:
-        player = input("Enter your move (X or O): ")
-        row = int(input("Enter the row (1, 2, or 3): "))
-        col = int(input("Enter the column (1, 2, or 3): "))
+        if turn == 0:
+            player = "X"
+        else:
+            player = "O"
+
+        row = int(input(f"Player {player}, enter the row (1, 2, or 3): "))
+        col = int(input(f"Player {player}, enter the column (1, 2, or 3): "))
 
         if move(player, row - 1, col - 1):
             print(board)
@@ -67,4 +74,6 @@ if __name__ == "__main__":
             print("Game Over!")
             print(board)
             complete = True
+
+        turn = 1 - turn  # Switch turns between 0 and 1
     
