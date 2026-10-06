@@ -1,80 +1,74 @@
 board = [["", "", ""],
-        ["", "", ""],
-        ["", "", ""]]
+         ["", "", ""],
+         ["", "", ""]]
+
+
+def reset_board():
+    """Reset the board to an empty 3x3 grid."""
+    global board
+    board = [["", "", ""],
+             ["", "", ""],
+             ["", "", ""]]
+
 
 def move(player, row, col):
-    if board[row][col] == "":
-        board[row][col] = player
-        return True
-    else:
+    """
+    Place a player's mark on the board.
+
+    Returns True if the move was valid, otherwise False.
+    """
+    if player not in ("X", "O"):
         return False
 
+    if not (0 <= row < 3 and 0 <= col < 3):
+        return False
+
+    if board[row][col] != "":
+        return False
+
+    board[row][col] = player
+    return True
+
+
 def check_if_winner():
-    # Check rows
+    """Return True if either player has three in a row."""
+
+    # Rows
     for row in board:
         if row[0] == row[1] == row[2] != "":
             return True
 
-    # Check columns
+    # Columns
     for col in range(3):
         if board[0][col] == board[1][col] == board[2][col] != "":
             return True
 
-    # Check diagonals
+    # Diagonals
     if board[0][0] == board[1][1] == board[2][2] != "":
         return True
+
     if board[0][2] == board[1][1] == board[2][0] != "":
         return True
 
     return False
 
+
 def check_if_tie():
-    for row in board:
-        for cell in row:
-            if cell == "":
-                return False
-    return True
+    """Return True if the board is full and nobody has won."""
+    return all(cell != "" for row in board for cell in row)
+
 
 def check_game_status():
+    """
+    Return:
+        "winner" if somebody won
+        "tie" if the board is full
+        None if the game is still active
+    """
     if check_if_winner():
-        print("We have a winner!")
-        return True
-    elif check_if_tie():
-        print("It's a tie!")
-        return True
-    else:
-        return False
+        return "winner"
 
-if __name__ == "__main__":
-    print("Welcome to Tic Tac Toe!")
-    print(board)
+    if check_if_tie():
+        return "tie"
 
-    complete = False
-
-    # X is 0, O is 1
-    turn = 0
-
-    while not complete:
-        if turn == 0:
-            player = "X"
-        else:
-            player = "O"
-
-        row = int(input(f"Player {player}, enter the row (1, 2, or 3): "))
-        col = int(input(f"Player {player}, enter the column (1, 2, or 3): "))
-
-        if move(player, row - 1, col - 1):
-            print(board)
-        else:
-            print("Invalid move. Try again.")
-            continue
-
-        # Check for a winner or a tie
-        if check_game_status():
-            complete = True
-            print("Game Over!")
-            print(board)
-            complete = True
-
-        turn = 1 - turn  # Switch turns between 0 and 1
-    
+    return None
