@@ -72,3 +72,41 @@ def check_game_status():
         return "tie"
 
     return None
+
+def print_board():
+    """Print the current state of the board."""
+    print("\n  0   1   2")
+    for idx, row in enumerate(board):
+        display_row = [cell if cell != "" else " " for cell in row]
+        print(f"{idx} " + " | ".join(display_row))
+        if idx < 2:
+            print(" ---+---+---")
+    print()
+
+def run_game():
+    """Run a simple command-line version of the game."""
+    reset_board()
+    current_player = "X"
+
+    while True:
+        print_board()
+        print(f"Player {current_player}'s turn.")
+        row = int(input("Enter row (0-2): "))
+        col = int(input("Enter column (0-2): "))
+
+        if move(current_player, row, col):
+            status = check_game_status()
+            if status == "winner":
+                print_board()
+                print(f"Player {current_player} wins!")
+                break
+            elif status == "tie":
+                print_board()
+                print("It's a tie!")
+                break
+            current_player = "O" if current_player == "X" else "X"
+        else:
+            print("Invalid move. Try again.")
+
+if __name__ == "__main__":
+    run_game()
