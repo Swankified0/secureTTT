@@ -7,7 +7,7 @@ PORT = 5555
 
 my_player = None
 game_over_event = threading.Event()
-
+both_players_connected = threading.Event()
 
 def print_board(board):
     """Render the 3x3 board in ASCII."""
@@ -52,6 +52,9 @@ def receive_messages(sock):
                     print("\nBoth players connected! Game started.")
                     if "board" in data_json:
                         print_board(data_json["board"])
+
+                    both_players_connected.set()
+                    
                     print(f"Current turn: Player {data_json.get('turn', 'X')}")
 
                 elif msg_type == "board":
@@ -112,8 +115,9 @@ def main():
         daemon=True
     )
     receiver.start()
+    both_players_connected.wait()
 
-    while not game_over_event.is_set():
+    while not (game_over_event.is_set()):
         try:
             row_str = input("Row (1-3): ")
             if game_over_event.is_set():
