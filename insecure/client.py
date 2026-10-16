@@ -8,6 +8,7 @@ PORT = 5555
 my_player = None
 game_over_event = threading.Event()
 both_players_connected = threading.Event()
+my_turn_event = threading.Event()
 
 def print_board(board):
     """Render the 3x3 board in ASCII."""
@@ -31,6 +32,8 @@ def receive_messages(sock):
             if not data:
                 print("\nDisconnected from server.")
                 game_over_event.set()
+                both_players_connected.set()
+                my_turn_event.set()
                 break
 
             buffer += data.decode("utf-8")
@@ -53,18 +56,26 @@ def receive_messages(sock):
                     if "board" in data_json:
                         print_board(data_json["board"])
 
-                    both_players_connected.set()
+                    current_turn = data_json.get("turn", "X")
+                    print(f"Current turn: Player {current_turn}")
+
+                    if current_turn == my_player:
+                        my_turn_event.set()
                     
-                    print(f"Current turn: Player {data_json.get('turn', 'X')}")
+                    both_players_connected.set()
 
                 elif msg_type == "board":
                     print_board(data_json["board"])
 
                 elif msg_type == "turn":
                     current_turn = data_json["player"]
+
                     if current_turn == my_player:
+                        my_turn_event.set()
                         print("It is YOUR turn!")
+
                     else:
+                        my_turn_event.clear()
                         print(f"Waiting for Player {current_turn}...")
 
                 elif msg_type == "game_over":
@@ -82,6 +93,7 @@ def receive_messages(sock):
                         print("=== GAME OVER: TIE ===")
 
                     game_over_event.set()
+                    my_turn_event.set()
 
                 elif msg_type == "error":
                     print(f"\n[Server Error]: {data_json.get('message')}")
@@ -89,20 +101,25 @@ def receive_messages(sock):
         except ConnectionResetError:
             print("\nConnection lost.")
             game_over_event.set()
+            both_players_connected.set()
+            my_turn_event.set()
             break
 
 
 def main():
     server_ip = "127.0.0.1"
+    server_port = PORT
 
     if len(sys.argv) > 1:
         server_ip = sys.argv[1]
+    if len(sys.argv) > 2:
+        server_port = int(sys.argv[2])
 
     client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
-    print(f"Connecting to {server_ip}:{PORT}...")
+    print(f"Connecting to {server_ip}:{server_port}...")
     try:
-        client.connect((server_ip, PORT))
+        client.connect((server_ip, server_port))
     except ConnectionRefusedError:
         print("Could not connect to the server. Make sure server.py is running.")
         return
@@ -118,6 +135,8 @@ def main():
     both_players_connected.wait()
 
     while not (game_over_event.is_set()):
+        my_turn_event.wait()
+
         try:
             row_str = input("Row (1-3): ")
             if game_over_event.is_set():
@@ -141,6 +160,7 @@ def main():
             }
 
             data = json.dumps(message) + "\n"
+            my_turn_event.clear()
             client.sendall(data.encode("utf-8"))
 
         except (ValueError, KeyboardInterrupt):
