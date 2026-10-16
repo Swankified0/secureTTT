@@ -1,11 +1,8 @@
 import socket
 import threading
 import json
-
-try:
-    from common.game import move, check_game_status, board, reset_board
-except ImportError:
-    from common.game import move, check_game_status, board, reset_board
+from common import game
+from common.board import print_board
 
 HOST = "0.0.0.0"
 PORT = 5555
@@ -60,20 +57,22 @@ def handle_move(player, message):
             })
             return
 
-        if not move(player, row, col):
+        if not game.move(player, row, col):
             send_json(players[player], {
                 "type": "error",
                 "message": "Invalid move position."
             })
             return
 
+        print_board(game.board)
+
         # Tell both clients about the updated board.
         broadcast({
             "type": "board",
-            "board": board
+            "board": game.board
         })
 
-        status = check_game_status()
+        status = game.check_game_status()
 
         if status == "winner":
             game_over = True
@@ -81,7 +80,7 @@ def handle_move(player, message):
                 "type": "game_over",
                 "result": "winner",
                 "winner": player,
-                "board": board
+                "board": game.board
             })
             return
 
@@ -90,7 +89,7 @@ def handle_move(player, message):
             broadcast({
                 "type": "game_over",
                 "result": "tie",
-                "board": board
+                "board": game.board
             })
             return
 
@@ -162,7 +161,7 @@ def main():
     global current_turn
     global game_over
 
-    reset_board()
+    game.reset_board()
     current_turn = "X"
     game_over = False
 
@@ -201,9 +200,10 @@ def main():
 
     broadcast({
         "type": "start",
-        "board": board,
+        "board": game.board,
         "turn": "X"
     })
+    print_board(game.board)
 
     x_thread = threading.Thread(
         target=handle_client,
