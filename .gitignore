@@ -25,3 +25,6 @@ htmlcov/
 # IDEs / Editors
 .vscode/
 .idea/
+
+# Generated local TLS certificate and private key
+/certs/
