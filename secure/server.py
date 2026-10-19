@@ -9,7 +9,7 @@ from common.board import print_board
 # Local demos only. Potential future LAN support would change this bind address
 # and require distributing the public certificate to the other computers.
 HOST = "127.0.0.1"
-PORT = 5557
+PORT = 5555
 CERT_DIR = Path(__file__).resolve().parent.parent / "certs"
 
 players = {}

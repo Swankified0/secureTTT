@@ -16,23 +16,43 @@ def modify_client_packet(message):
         return message
 
     with console_input_lock:
-        print("\nPlayer submitted a move. Enter replacement coordinates or press Enter to keep each value.")
-        message["row"] = prompt_coordinate("row", message.get("row"))
-        message["col"] = prompt_coordinate("column", message.get("col"))
+        original_row = message.get("row")
+        original_col = message.get("col")
+        print(
+            "\nRead move from plaintext: "
+            f"row={format_coordinate(original_row)}, "
+            f"column={format_coordinate(original_col)}"
+            "\nEnter new coordinates to modify the move, or press Enter to keep the current values."
+        )
+        message["row"] = prompt_coordinate("row", original_row)
+        message["col"] = prompt_coordinate("column", original_col)
+
+        if (message["row"], message["col"]) != (original_row, original_col):
+            print(
+                "Modified move: "
+                f"row {format_coordinate(original_row)} -> "
+                f"{format_coordinate(message['row'])}, "
+                f"column {format_coordinate(original_col)} -> "
+                f"{format_coordinate(message['col'])}"
+            )
+        else:
+            print("Move left unchanged.")
 
     return message
 
 
+def format_coordinate(value):
+    """Format an internal zero-based coordinate for display."""
+    if isinstance(value, int) and not isinstance(value, bool) and 0 <= value <= 2:
+        return str(value + 1)
+    return repr(value)
+
+
 def prompt_coordinate(name, current_value):
     """Prompt for a 1-based board coordinate, preserving the current value on Enter."""
-    if isinstance(current_value, int) and not isinstance(current_value, bool) and 0 <= current_value <= 2:
-        current_display = current_value + 1
-    else:
-        current_display = "unchanged"
-
     while True:
         value = input(
-            f"Replacement {name}: "
+            f"Replacement {name}:"
         ).strip()
         if not value:
             return current_value
@@ -54,18 +74,102 @@ def modify_server_packet(message):
     return message
 
 
+def inspect_tls_records(data, buffer, direction):
+    """Report one encrypted TLS record without changing the bytes being relayed."""
+    buffer.extend(data)
+
+    while len(buffer) >= 5:
+        record_length = int.from_bytes(buffer[3:5], byteorder="big")
+        record_size = 5 + record_length
+        if len(buffer) < record_size:
+            break
+
+        content_type = buffer[0]
+        payload = bytes(buffer[5:record_size])
+        del buffer[:record_size]
+
+        if content_type != 23:
+            continue
+
+        print(
+            f"\nOpaque TLS application-data record observed "
+            f"({direction}, {len(payload)} bytes)."
+        )
+        print(f"Ciphertext sample: {payload[:16].hex(' ')}")
+        try:
+            json.loads(payload.decode("utf-8"))
+        except (UnicodeDecodeError, json.JSONDecodeError) as error:
+            print(
+                f"Inspection attempt failed: {type(error).__name__}. "
+                "Move contents are not readable or editable."
+            )
+        else:
+            print(
+                "Payload superficially parsed as JSON, but it remains "
+                "TLS data and will not be modified."
+            )
+
+
 def relay(source, destination, transform, direction):
     buffer = b""
+    is_tls = None
+    tls_record_buffer = bytearray()
 
     try:
         while True:
             data = source.recv(4096)
             if not data:
-                if buffer:
+                if is_tls is None:
+                    is_tls = (
+                        len(buffer) >= 3
+                        and buffer[0] in (20, 21, 22, 23)
+                        and buffer[1] == 3
+                    )
+                if buffer and not is_tls:
                     raise ValueError(f"Incomplete JSON packet from {direction}")
                 break
 
             buffer += data
+            if is_tls is None:
+                if (
+                    len(buffer) >= 3
+                    and buffer[0] in (20, 21, 22, 23)
+                    and buffer[1] == 3
+                ):
+                    is_tls = True
+                    if direction == "client -> server":
+                        print(
+                            "TLS client detected. The proxy will attempt "
+                            "to inspect records and will forward them unchanged."
+                        )
+                elif len(buffer) >= 3:
+                    is_tls = False
+                    if direction == "client -> server":
+                        print(
+                            "Plaintext client detected; move messages "
+                            "can be read and modified."
+                        )
+
+            if is_tls:
+                inspect_tls_records(
+                    buffer,
+                    tls_record_buffer,
+                    direction,
+                )
+                destination.sendall(buffer)
+                buffer = b""
+                while True:
+                    data = source.recv(4096)
+                    if not data:
+                        break
+                    inspect_tls_records(
+                        data,
+                        tls_record_buffer,
+                        direction,
+                    )
+                    destination.sendall(data)
+                break
+
             while b"\n" in buffer:
                 line, buffer = buffer.split(b"\n", 1)
                 if not line.strip():
@@ -93,6 +197,7 @@ def relay(source, destination, transform, direction):
 
 
 def handle_client(client_socket, client_address):
+    print(f"Client connected from {client_address}; awaiting protocol data.")
     server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     try:
         server_socket.connect((SERVER_HOST, SERVER_PORT))
@@ -127,8 +232,8 @@ def main():
     proxy.bind((LISTEN_HOST, LISTEN_PORT))
     proxy.listen()
 
-    print(f"Proxy listening on port {LISTEN_PORT}")
-    print(f"Forwarding to game server at {SERVER_HOST}:{SERVER_PORT}")
+    print(f"Proxy listening on {LISTEN_HOST}:{LISTEN_PORT}")
+    print(f"Forwarding connections to {SERVER_HOST}:{SERVER_PORT}")
 
     try:
         while True:
