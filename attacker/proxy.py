@@ -7,10 +7,46 @@ LISTEN_PORT = 5556
 SERVER_HOST = "127.0.0.1"
 SERVER_PORT = 5555
 
+console_input_lock = threading.Lock()
+
 
 def modify_client_packet(message):
     """Edit a client-to-server JSON message before forwarding it."""
+    if message.get("type") != "move":
+        return message
+
+    with console_input_lock:
+        print("\nPlayer submitted a move. Enter replacement coordinates or press Enter to keep each value.")
+        message["row"] = prompt_coordinate("row", message.get("row"))
+        message["col"] = prompt_coordinate("column", message.get("col"))
+
     return message
+
+
+def prompt_coordinate(name, current_value):
+    """Prompt for a 1-based board coordinate, preserving the current value on Enter."""
+    if isinstance(current_value, int) and not isinstance(current_value, bool) and 0 <= current_value <= 2:
+        current_display = current_value + 1
+    else:
+        current_display = "unchanged"
+
+    while True:
+        value = input(
+            f"Replacement {name}: "
+        ).strip()
+        if not value:
+            return current_value
+
+        try:
+            coordinate = int(value)
+        except ValueError:
+            print("Enter a number from 1 to 3, or press Enter to keep the current value.")
+            continue
+
+        if 1 <= coordinate <= 3:
+            return coordinate - 1
+
+        print("Coordinate must be between 1 and 3.")
 
 
 def modify_server_packet(message):
@@ -43,7 +79,7 @@ def relay(source, destination, transform, direction):
                 packet = json.dumps(modified_message) + "\n"
                 destination.sendall(packet.encode("utf-8"))
 
-    except (OSError, UnicodeDecodeError, json.JSONDecodeError, ValueError) as error:
+    except (OSError, UnicodeDecodeError, json.JSONDecodeError, ValueError, EOFError) as error:
         print(f"Proxy relay error ({direction}): {error}")
         try:
             destination.shutdown(socket.SHUT_RDWR)

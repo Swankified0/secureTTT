@@ -3,7 +3,7 @@ import threading
 import json
 import sys
 
-PORT = 5555
+PORT = 5556
 
 my_player = None
 game_over_event = threading.Event()

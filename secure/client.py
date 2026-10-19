@@ -5,7 +5,7 @@ import json
 from pathlib import Path
 
 HOST = "127.0.0.1"
-PORT = 5557
+PORT = 5556
 SERVER_NAME = "localhost"
 CERT_FILE = Path(__file__).resolve().parent.parent / "certs" / "server.crt"
 # Potential future LAN support can make the connection address and certificate path
