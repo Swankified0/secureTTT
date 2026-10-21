@@ -19,9 +19,12 @@ def modify_client_packet(message):
         original_row = message.get("row")
         original_col = message.get("col")
         print(
-            "\nRead move from plaintext: "
+            f"\nIntercepted move json:\n{message}"
+            "\nMove in plaintext: "
             f"row={format_coordinate(original_row)}, "
-            f"column={format_coordinate(original_col)}"
+            f"column={format_coordinate(original_col)}")
+        
+        print(
             "\nEnter new coordinates to modify the move, or press Enter to keep the current values."
         )
         message["row"] = prompt_coordinate("row", original_row)
