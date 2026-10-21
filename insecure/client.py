@@ -138,20 +138,29 @@ def main():
         my_turn_event.wait()
 
         try:
-            row_str = input("Row (1-3): ")
-            if game_over_event.is_set():
-                break
+            while True:
+                try:
+                    row_str = input("Row (1-3): ")
+                    row = int(row_str) - 1
+                    if not 0 <= row <= 2:
+                        print("Row must be between 1 and 3. Try again")
+                        continue
+                    break
+                except ValueError:
+                    print("Must enter a single number for the row. Try again")
+                    continue
 
-            col_str = input("Column (1-3): ")
-            if game_over_event.is_set():
-                break
-
-            row = int(row_str) - 1
-            col = int(col_str) - 1
-
-            if not (0 <= row <= 2 and 0 <= col <= 2):
-                print("Coordinates must be between 1 and 3.")
-                continue
+            while True:
+                try:
+                    col_str = input("Column (1-3): ")
+                    col = int(col_str) - 1
+                    if not 0 <= col <= 2:
+                        print("Column must be between 1 and 3. Try again")
+                        continue
+                    break
+                except ValueError:
+                    print("Must enter a single number for the column. Try again")
+                    continue
 
             message = {
                 "type": "move",
