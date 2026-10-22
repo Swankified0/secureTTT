@@ -4,7 +4,7 @@
 
 **Project Description:**
 
-This project is a Secure implementation of tic-tac-tung
+This project is a Secure implementation of tic-tac-toe
 
 *AI USAGE STATMENT:* 
 The authors would like to acknowledge the use of **[Generative AI Tool Name]**, a 
